@@ -112,9 +112,9 @@ def inscription(challenge_id):
 
     # Obtenir les IDs des athlètes déjà inscrits
     inscrits_ids = {
-        p["properties"]["Athlète"]["relation"][0]["id"]
+        p["properties"]["Athlete"]["relation"][0]["id"]
         for p in participations
-        if p["properties"]["Athlète"]["relation"]
+        if p["properties"]["Athlete"]["relation"]
     }
     
     # Ne garder que ceux non inscrits
@@ -145,7 +145,7 @@ def join_challenge():
         database_id=config["PARTICIPATIONS_DB_ID"],
         filter={
             "and": [
-                {"property": "Athlète", "relation": {"contains": athlete_id}},
+                {"property": "Athlete", "relation": {"contains": athlete_id}},
                 {"property": "Challenge", "relation": {"contains": challenge_id}},
             ]
         }
@@ -158,7 +158,7 @@ def join_challenge():
     notion.pages.create(
         parent={"database_id": config["PARTICIPATIONS_DB_ID"]},
         properties={
-            "Athlète": {"relation": [{"id": athlete_id}]},
+            "Athlete": {"relation": [{"id": athlete_id}]},
             "Challenge": {"relation": [{"id": challenge_id}]},
             "Distance totale (km)": {"number": 0},
             #"Temps total (min)": {"number": 0},
