@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from notion_client import Client
 
 app = Flask(__name__)
+config_path = os.getenv("CONFIG_PATH", "/etc/secrets/config.json")
 
 # Charger la config
 with open("config.json") as f:
