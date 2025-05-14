@@ -23,4 +23,4 @@ jobs:
         run: echo '${{ secrets.CONFIG_JSON }}' > config.json
 
       - name: Run script
-        run: python recuperations_activites.py
+        run: python recuperation_activites.py
