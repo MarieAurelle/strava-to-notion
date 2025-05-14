@@ -1,3 +1,5 @@
 flask
 notion-client
 requests
+pandas
+openpyxl
