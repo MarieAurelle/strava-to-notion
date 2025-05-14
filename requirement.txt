@@ -1,0 +1,3 @@
+flask
+notion-client
+requests

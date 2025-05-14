@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Inscription au Challenge</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Inscription au Challenge</h1>
+	{% if athletes|length == 0 %}
+		<p class="info-message">🎉 Tous les athlètes sont déjà inscrits à ce challenge !</p>
+	{% else %}
+		<form method="POST" action="/join-challenge">
+			<label for="athlete_id">Sélectionnez votre nom :</label>
+			<select name="athlete_id" required>
+				{% for athlete in athletes %}
+					<option value="{{ athlete['id'] }}">
+						{{ athlete['name'] }}
+					</option>
+				{% endfor %}
+			</select>
+
+			<!-- Champ caché pour envoyer l'ID du challenge -->
+			<input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+
+			<button type="submit" class="btn">S'inscrire au challenge</button>
+		</form>
+	{% endif %}
+  </div>
+</body>
+</html>

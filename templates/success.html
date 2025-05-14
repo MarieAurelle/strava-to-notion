@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion réussie</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="success-page">
+    <div class="container">
+        <h1>✅ Merci !</h1>
+        <p>L'opération a été effectuée avec succès.</p>
+        {% if message %}
+            <div class="info-box">{{ message }}</div>
+        {% endif %}
+        <a href="/" class="btn">Retour à l'accueil</a>
+    </div>
+</body>
+</html>

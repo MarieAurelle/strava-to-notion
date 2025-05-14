@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion Strava</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <form action="/start" method="post">
+        <h2>Connexion Strava</h2>
+
+        <label for="email">Adresse email professionnelle</label>
+        <input type="email" id="email" name="email" placeholder="adresse@aneo.fr" required>
+
+        <button type="submit">Se connecter à Strava</button>
+
+        <footer>
+            Vos informations d'activités ne seront utilisées que dans le cadre des différents challenges auxquels vous serez inscrits.
+        </footer>
+    </form>
+
+</body>
+</html>
+
