@@ -3,6 +3,7 @@ import requests
 import json
 from datetime import datetime, timezone
 from notion_client import Client
+import os
 
 app = Flask(__name__)
 config_path = os.getenv("CONFIG_PATH", "/etc/secrets/config.json")
