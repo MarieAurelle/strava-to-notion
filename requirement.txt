@@ -3,3 +3,4 @@ notion-client
 requests
 pandas
 openpyxl
+gunicorn
