@@ -122,7 +122,7 @@ def save_activity(activity, athlete_id, participation_id):
     page = notion.pages.create(
         parent={"database_id": DB_ACTIVITIES},
         properties={
-            "Nom": {"title": [{"text": {"content": f"{activity["name"]} - {round(activity["distance"] / 1000, 2)}"}}]},
+            "Nom": {"title": [{"text": {"content": f"{activity['name']} - {round(activity['distance'] / 1000, 2)}"}}]},
             "Activité": {
                 "rich_text": [{"text": {"content": activity["name"]}}]
             },
