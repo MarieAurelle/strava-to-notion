@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <title>Connexion réussie</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    {% if auto_close_popup == "True" %}
+    <script>
+        window.onload = function () {
+            window.opener.postMessage({
+                type: "JOIN_CHALLENGE",
+                collabId: "{{ collab_id }}",
+                challengeId: "{{ challenge_id }}"
+            }, "*");
+
+            // Optionnel : petit délai pour laisser le message partir
+            setTimeout(() => window.close(), 500);
+        };
+    </script>
+    {% endif %}
 </head>
 <body class="success-page">
     <div class="container">
@@ -12,7 +27,7 @@
         {% if message %}
             <div class="info-box">{{ message }}</div>
         {% endif %}
-        <a href="/" class="btn">Retour à l'accueil</a>
+        <p>Vous pouvez fermer cette page</p>
     </div>
 </body>
 </html>

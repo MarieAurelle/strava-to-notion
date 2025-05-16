@@ -1,9 +1,10 @@
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, render_template_string, url_for, jsonify
 import requests
-import json
+import json, urllib.parse
 from datetime import datetime, timezone
 from notion_client import Client
 import os
+import webbrowser
 
 app = Flask(__name__)
 config_path = os.getenv("CONFIG_PATH", "/etc/secrets/config.json")
@@ -14,160 +15,263 @@ with open("config.json") as f:
 
 notion = Client(auth=config["NOTION_TOKEN"])
 
-@app.route("/")
-def index():
-    return render_template("form.html")
-
-@app.route("/start", methods=["POST"])
+@app.route("/start")
 def start():
-    email = request.form["email"]
-    strava_auth_url = (
-        f"https://www.strava.com/oauth/authorize"
-        f"?client_id={config['STRAVA_CLIENT_ID']}"
-        f"&response_type=code"
-        f"&redirect_uri={config['REDIRECT_URI']}"
-        f"&approval_prompt=auto"
-        f"&scope=read,activity:read_all"
-        f"&state={email}"
-    )
-    return redirect(strava_auth_url)
+    collab_id = request.args.get("collab_id")
+    challenge_id = request.args.get("challenge_id")
+
+    try:
+        # Récupération de l'athlète correspondant
+        query = notion.databases.query(
+            database_id=config["ATHLETES_DB_ID"],
+            filter={
+                "property": "Collaborateur",  # nom de la propriété de relation
+                "relation": {
+                    "contains": collab_id
+                }
+            }
+        )
+        athletes = query.get("results", [])
+
+        if not athletes:
+            # Aucun athlète trouvé alors on le créé
+            state_data = {
+                "collab_id": collab_id,
+                "challenge_id": challenge_id,
+                "post_redirect": True  # Pour déclencher le formulaire POST plus tard
+            }
+            state_encoded = urllib.parse.quote(json.dumps(state_data))
+
+            strava_auth_url = (
+                f"https://www.strava.com/oauth/authorize"
+                f"?client_id={config['STRAVA_CLIENT_ID']}"
+                f"&response_type=code"
+                f"&redirect_uri={config['REDIRECT_URI']}"
+                f"&approval_prompt=auto"
+                f"&scope=read,activity:read_all"
+                f"&state={state_encoded}"
+            )
+
+            return redirect(strava_auth_url)
+
+        return redirect(url_for("join_challenge_success", message="✅ Connexion à Strava déjà établie !", auto_close_popup=True, collab_id=collab_id, challenge_id=challenge_id))
+    except Exception as e:
+        return redirect(url_for("join_challenge_error", message=str(e)))
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
-    email = request.args.get("state")
 
-    # Échange le code contre des tokens
-    token_res = requests.post("https://www.strava.com/oauth/token", data={
-        "client_id": config["STRAVA_CLIENT_ID"],
-        "client_secret": config["STRAVA_CLIENT_SECRET"],
-        "code": code,
-        "grant_type": "authorization_code"
-    })
-    tokens = token_res.json()
+    state = request.args.get("state")
+    state_decoded = json.loads(urllib.parse.unquote(state))
+    collab_id = state_decoded["collab_id"]
+    challenge_id = state_decoded["challenge_id"]
 
-    if "access_token" not in tokens:
-        print("Erreur lors de l'authentification Strava")
-        return render_template("error.html", message="Erreur lors de l'authentification Strava !")
-        
-    # Rechercher un athlète par email
-    athletes = notion.databases.query(
-        database_id=config["ATHLETES_DB_ID"],
-        filter={"property": "Email", "email": {"equals": email}}
-    )
+    try:
 
-    if athletes["results"]:
-        print("❌ Cet athlète existe déjà dans Notion")
-        return render_template("success.html", message="Votre compte Strava est déjà connecté à Notion !")
-    
-    # Rechercher le collaborateur par email
-    collabs = notion.databases.query(
-        database_id=config["COLLAB_DB_ID"],
-        filter={"property": "email", "email": {"equals": email}}
-    )
+        # Échange le code contre des tokens
+        token_res = requests.post("https://www.strava.com/oauth/token", data={
+            "client_id": config["STRAVA_CLIENT_ID"],
+            "client_secret": config["STRAVA_CLIENT_SECRET"],
+            "code": code,
+            "grant_type": "authorization_code"
+        })
+        tokens = token_res.json()
 
-    if not collabs["results"]:
-        print("❌ Collaborateur introuvable dans Notion")
-        return render_template("error.html", message="Nous ne vous avons pas trouvé dans Notion !")
+        if "access_token" not in tokens:
+            raise Exception("❌ Erreur lors de l'authentification Strava")
 
-    collab_id = collabs["results"][0]["id"]
-    collab_nom = collabs["results"][0]["properties"]["Nom"]["title"][0]["plain_text"]
-    collab_prenom = collabs["results"][0]["properties"]["Prénom"]["rich_text"][0]["plain_text"]
-    title = f"{collab_nom} {collab_prenom}"
+        # Récupération de l'athlète correspondant
+        athletes = notion.databases.query(
+            database_id=config["ATHLETES_DB_ID"],
+            filter={
+                "property": "Collaborateur",  # nom de la propriété de relation
+                "relation": {
+                    "contains": collab_id
+                }
+            }
+        )
 
-    # Créer l’entrée Athlète
-    notion.pages.create(
-        parent={"database_id": config["ATHLETES_DB_ID"]},
-        properties={
-            "Nom": {"title": [{"text": {"content": title}}]},
-            "Email": {"email": email},
-            "Strava ID": {"rich_text": [{"text": {"content": str(tokens['athlete']['id'])}}]},
-            "Access Token": {"rich_text": [{"text": {"content": tokens['access_token']}}]},
-            "Refresh Token": {"rich_text": [{"text": {"content": tokens['refresh_token']}}]},
-            "Expires At": {"number": tokens['expires_at']},
-            "Last Sync": {"date": {"start": datetime.now(timezone.utc).isoformat()}},
-            "Collaborateur": {"relation": [{"id": collab_id}]}
-        }
-    )
+        if athletes["results"]:
+            raise Exception("❌ Cet athlète existe déjà dans Notion")
 
-    return render_template("success.html", message="Votre compte Strava est maintenant connecté à Notion !")
+        # Rechercher le collaborateur par email
+        collab = notion.pages.retrieve(page_id=collab_id)
 
-@app.route("/inscription/<challenge_id>")
-def inscription(challenge_id):
-    # Récupère les athlètes dans Notion
-    athletes = notion.databases.query(
-        database_id=config["ATHLETES_DB_ID"]
-    )["results"]
+        if not collab:
+            raise Exception("❌ Collaborateur introuvable dans Notion")
 
-    # Récupère toutes les participations à ce challenge
+        collab_nom = collab["properties"]["Nom"]["title"][0]["plain_text"]
+        collab_prenom = collab["properties"]["Prénom"]["rich_text"][0]["plain_text"]
+        title = f"{collab_nom} {collab_prenom}"
+
+        # Créer l’entrée Athlète
+        athlete = notion.pages.create(
+            parent={"database_id": config["ATHLETES_DB_ID"]},
+            properties={
+                "Nom": {"title": [{"text": {"content": title}}]},
+                "Strava ID": {"rich_text": [{"text": {"content": str(tokens['athlete']['id'])}}]},
+                "Access Token": {"rich_text": [{"text": {"content": tokens['access_token']}}]},
+                "Refresh Token": {"rich_text": [{"text": {"content": tokens['refresh_token']}}]},
+                "Expires At": {"number": tokens['expires_at']},
+                "Last Sync": {"date": {"start": datetime.now(timezone.utc).isoformat()}},
+                "Collaborateur": {"relation": [{"id": collab_id}]}
+            }
+        )
+
+        return redirect(url_for("join_challenge_success", message="✅ Connexion à Strava réussie !", auto_close_popup=True, collab_id=collab_id, challenge_id=challenge_id))
+    except Exception as e:
+        return redirect(url_for("join_challenge_error", message=str(e)))
+
+def get_collaborateurs_from_club():
+    page = notion.pages.retrieve(page_id=config["CLUB_RUNNING_ID"])
+    collaborateurs_rel = page["properties"]["Collaborateurs"]["relation"]
+    collab_ids = [rel["id"] for rel in collaborateurs_rel]
+
+    collaborateurs = []
+
+    for collab_id in collab_ids:
+        collab_page = notion.pages.retrieve(page_id=collab_id)
+        props = collab_page["properties"]
+
+        nom = props["Nom"]["title"][0]["plain_text"] if props["Nom"]["title"] else ""
+        prenom = props["Prénom"]["rich_text"][0]["plain_text"] if props["Prénom"]["rich_text"] else ""
+
+        collaborateurs.append({
+            "id": collab_id,
+            "nom": nom,
+            "prenom": prenom
+        })
+
+    return collaborateurs
+
+def get_collaborateurs_non_inscrits(challenge_id):
+    # 1. Récupérer tous les collaborateurs (id, nom, prénom)
+    all_collabs = get_collaborateurs_from_club()
+    all_collab_ids = {c["id"] for c in all_collabs}
+
+    # 2. Récupérer les participations au challenge
     participations = notion.databases.query(
         database_id=config["PARTICIPATIONS_DB_ID"],
         filter={
             "property": "Challenge",
-            "relation": {
-                "contains": challenge_id
-            }
+            "relation": {"contains": challenge_id}
         }
-    )["results"]
+    )
 
-    # Obtenir les IDs des athlètes déjà inscrits
-    inscrits_ids = {
-        p["properties"]["Athlete"]["relation"][0]["id"]
-        for p in participations
-        if p["properties"]["Athlete"]["relation"]
-    }
-    
+    # 3. Identifier les collaborateurs déjà inscrits via les athlètes
+    collabs_inscrits = set()
+
+    for participation in participations["results"]:
+        athlete_rel = participation["properties"].get("Athlete", {}).get("relation", [])
+        if not athlete_rel:
+            continue
+        athlete_id = athlete_rel[0]["id"]
+        athlete = notion.pages.retrieve(page_id=athlete_id)
+        collab_rel = athlete["properties"].get("Collaborateur", {}).get("relation", [])
+        if collab_rel:
+            collabs_inscrits.add(collab_rel[0]["id"])
+
+    # 4. Filtrer les collaborateurs non inscrits
+    non_inscrits = [c for c in all_collabs if c["id"] not in collabs_inscrits]
+
+    return non_inscrits
+
+
+@app.route("/inscription/<challenge_id>")
+def inscription(challenge_id):
     # Ne garder que ceux non inscrits
-    athletes_non_inscrits = [a for a in athletes if a["id"] not in inscrits_ids]
-
+    athletes_non_inscrits = get_collaborateurs_non_inscrits(challenge_id)
 
     athlete_list = []
     for athlete in athletes_non_inscrits:
-        props = athlete["properties"]
-        email = props.get("Email", {}).get("email")
-        name = props.get("Nom", {}).get("title", [{}])[0].get("plain_text", "Inconnu")
-        if email:
-            athlete_list.append({"name": name, "email": email, "id": athlete.get("id")})
-    print(athlete_list)
-    return render_template("inscription.html", athletes=athlete_list, challenge_id=challenge_id)
+        name = f"{athlete['nom']} {athlete['prenom']}"
+        if name:
+            athlete_list.append({"name": name, "id": athlete.get("id")})
 
+    return render_template("inscription.html", athletes=athlete_list, challenge_id=challenge_id)
 
 @app.route("/join-challenge", methods=["POST"])
 def join_challenge():
-    challenge_id = request.form["challenge_id"]
-    athlete_id = request.form["athlete_id"]
-    
-    if not challenge_id or not athlete_id:
-        return render_template("error.html", message="Paramètres manquants.")
+    data = request.get_json()
+    collab_id = data['collab_id']
+    challenge_id = data['challenge_id']
 
-    # Vérifier s’il existe déjà une participation
-    participations = notion.databases.query(
-        database_id=config["PARTICIPATIONS_DB_ID"],
-        filter={
-            "and": [
-                {"property": "Athlete", "relation": {"contains": athlete_id}},
-                {"property": "Challenge", "relation": {"contains": challenge_id}},
-            ]
-        }
-    )
+    try:
+        if not challenge_id or not collab_id:
+            raise Exception("❌ Paramètres manquants")
 
-    if participations["results"]:
-        return render_template("success.html", message="✅ Vous êtes déjà inscrit à ce challenge.")
+        # Récupération de l'athlète correspondant
+        query = notion.databases.query(
+            database_id=config["ATHLETES_DB_ID"],
+            filter={
+                "property": "Collaborateur",  # nom de la propriété de relation
+                "relation": {
+                    "contains": collab_id
+                }
+            }
+        )
+        athletes = query.get("results", [])
 
-    # Créer la participation
-    notion.pages.create(
-        parent={"database_id": config["PARTICIPATIONS_DB_ID"]},
-        properties={
-            "Athlete": {"relation": [{"id": athlete_id}]},
-            "Challenge": {"relation": [{"id": challenge_id}]},
-            "Distance totale (km)": {"number": 0},
-            #"Temps total (min)": {"number": 0},
-            #"Nombre d'activités": {"number": 0},
-        }
-    )
+        if not athletes:
+            # Aucun athlète trouvé alors erreur
+            raise Exception("❌ Athlète non trouvé dans Notion !")
+        else:
+            athlete = athletes[0]
 
-    return render_template("success.html", message="✅ Inscription au challenge réussie !")
+        athlete_id = athlete["id"]
 
+        # Vérifier s’il existe déjà une participation
+        participations = notion.databases.query(
+            database_id=config["PARTICIPATIONS_DB_ID"],
+            filter={
+                "and": [
+                    {"property": "Athlete", "relation": {"contains": athlete_id}},
+                    {"property": "Challenge", "relation": {"contains": challenge_id}},
+                ]
+            }
+        )
+
+        if participations["results"]:
+            return jsonify({
+                    "message": "✅ Vous êtes déjà inscrit à ce challenge !",
+                    "redirect_url": url_for('join_challenge_success')  # ou une URL vers une page succès dans ton app
+                })
+
+        # Créer la participation
+        notion.pages.create(
+            parent={"database_id": config["PARTICIPATIONS_DB_ID"]},
+            properties={
+                "Athlete": {"relation": [{"id": athlete_id}]},
+                "Challenge": {"relation": [{"id": challenge_id}]},
+                "Distance totale (km)": {"number": 0},
+                #"Temps total (min)": {"number": 0},
+                #"Nombre d'activités": {"number": 0},
+            }
+        )
+
+        return jsonify({
+                "message": "✅ Inscription au challenge réussie !",
+                "redirect_url": url_for('join_challenge_success')  # ou une URL vers une page succès dans ton app
+            })
+    except Exception as e:
+        return jsonify({
+                        "message": f"❌ Erreur lors de l'inscription : { str(e)}",
+                        "redirect_url": url_for('join_challenge_error')  # ou une URL vers une page succès dans ton app
+                    })
+
+@app.route("/join-challenge/success")
+def join_challenge_success():
+    message = request.args.get("message", "Succès !")
+    auto_close_popup = request.args.get("auto_close_popup", "False")
+    collab_id = request.args.get("collab_id", "")
+    challenge_id = request.args.get("challenge_id", "")
+    return render_template("success.html", message=message, auto_close_popup=auto_close_popup, collab_id=collab_id, challenge_id=challenge_id)
+
+@app.route("/join-challenge/error")
+def join_challenge_error():
+    message = request.args.get("message", "Une erreur est survenue.")
+    return render_template("error.html", message=message)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # fallback à 5000 si PORT non défini

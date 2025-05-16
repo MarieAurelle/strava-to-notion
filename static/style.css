@@ -136,3 +136,9 @@ body.error-page .info-box {
     font-size: 1.1rem;
 }
 
+#spinner p {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #555;
+}
+
