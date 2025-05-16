@@ -5,7 +5,7 @@ import requests
 from notion_client import Client
 
 # Charger la configuration
-with open("config.json") as f:
+with open("config.prod.json") as f:
     config = json.load(f)
 
 NOTION_SECRET = config["NOTION_TOKEN"]
@@ -90,9 +90,6 @@ def save_activity(activity, athlete_id, participation_id):
         parent={"database_id": DB_ACTIVITIES},
         properties={
             "Nom": {"title": [{"text": {"content": f"{activity['name']} - {round(activity['distance'] / 1000, 2)}"}}]},
-            "Activité": {
-                "rich_text": [{"text": {"content": activity["name"]}}]
-            },
             "Date": {
                 "date": {"start": activity["start_date_local"]}
             },
@@ -105,9 +102,6 @@ def save_activity(activity, athlete_id, participation_id):
             "Type": {
                 "select": {"name": activity["type"]}
             },
-            #"Extraction": {
-            #    "relation": [{"id": extraction_id}]
-            #},
             "Athlete": {
                 "relation": [{"id": athlete_id}]
             },
@@ -121,38 +115,6 @@ def save_activity(activity, athlete_id, participation_id):
     link_to_participation(page["id"], participation_id)
     return page["id"]
     
-def update_participation_stats(participation_id):
-    participation = notion.pages.retrieve(page_id=participation_id)
-    activity_relations = participation["properties"].get("Activité", {}).get("relation", [])
-
-    total_distance = 0
-    total_time = 0
-    activity_count = 0
-
-    for rel in activity_relations:
-        activity_id = rel["id"]
-        activity = notion.pages.retrieve(page_id=activity_id)
-        props = activity["properties"]
-
-        distance = props.get("Distance (km)", {}).get("number")
-        time_min = props.get("Temps (min)", {}).get("number")
-
-        if distance:
-            total_distance += distance
-        if time_min:
-            total_time += time_min
-        activity_count += 1
-
-    notion.pages.update(
-        page_id=participation_id,
-        properties={
-            "Distance totale (km)": {"number": round(total_distance, 2)},
-            #"Temps total (min)": {"number": round(total_time, 1)},
-            #"Nombre d'activités": {"number": activity_count}
-        }
-    )
-
-    
 def link_to_participation(activity_page_id, participation_id):
     participation = notion.pages.retrieve(participation_id)
 
@@ -163,8 +125,8 @@ def link_to_participation(activity_page_id, participation_id):
         challenge_id = challenge_ref[0]["id"]
         challenge = notion.pages.retrieve(challenge_id)
         challenge_props = challenge["properties"]
-        start = challenge_props["Date de début"]["date"]["start"]
-        end = challenge_props["Date de fin"]["date"]["end"]
+        start = challenge_props["Date début"]["date"]["start"]
+        end = challenge_props["Date fin"]["date"]["end"]
 
         # Mise à jour de la participation : ajout de l’activité
         existing_relations = props.get("Activités", {}).get("relation", [])
@@ -177,8 +139,6 @@ def link_to_participation(activity_page_id, participation_id):
                     "Activités": {"relation": existing_relations + [{"id": activity_page_id}]}
                 }
             )
-            #update_participation_stats(participation_id)
-    
 
 def get_active_participations(athlete_id):
     participations = notion.databases.query(
@@ -200,8 +160,8 @@ def get_active_participations(athlete_id):
 
         challenge_id = challenge_rel[0]["id"]
         challenge = notion.pages.retrieve(challenge_id)
-        start = challenge["properties"]["Date de début"]["date"]["start"]
-        end = challenge["properties"]["Date de fin"]["date"]["start"]
+        start = challenge["properties"]["Date début"]["date"]["start"]
+        end = challenge["properties"]["Date fin"]["date"]["start"]
 
         if start <= now <= end:
             active.append({

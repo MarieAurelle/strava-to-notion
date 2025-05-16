@@ -10,7 +10,7 @@ app = Flask(__name__)
 config_path = os.getenv("CONFIG_PATH", "/etc/secrets/config.json")
 
 # Charger la config
-with open("config.json") as f:
+with open("config.prod.json") as f:
     config = json.load(f)
 
 notion = Client(auth=config["NOTION_TOKEN"])
@@ -26,7 +26,7 @@ def start():
             database_id=config["ATHLETES_DB_ID"],
             filter={
                 "property": "Collaborateur",  # nom de la propriété de relation
-                "relation": {
+                "people": {
                     "contains": collab_id
                 }
             }
@@ -86,7 +86,7 @@ def callback():
             database_id=config["ATHLETES_DB_ID"],
             filter={
                 "property": "Collaborateur",  # nom de la propriété de relation
-                "relation": {
+                "people": {
                     "contains": collab_id
                 }
             }
@@ -95,15 +95,18 @@ def callback():
         if athletes["results"]:
             raise Exception("❌ Cet athlète existe déjà dans Notion")
 
-        # Rechercher le collaborateur par email
-        collab = notion.pages.retrieve(page_id=collab_id)
+        # Rechercher le collaborateur par id
+        #collab = notion.pages.retrieve(page_id=collab_id)
+        collabs = get_collaborateurs_from_club()
+        collab = next((c for c in collabs if c["id"] == collab_id), None)
 
         if not collab:
             raise Exception("❌ Collaborateur introuvable dans Notion")
 
-        collab_nom = collab["properties"]["Nom"]["title"][0]["plain_text"]
-        collab_prenom = collab["properties"]["Prénom"]["rich_text"][0]["plain_text"]
-        title = f"{collab_nom} {collab_prenom}"
+        #collab_nom = collab["properties"]["Nom"]["title"][0]["plain_text"]
+        #collab_prenom = collab["properties"]["Prénom"]["rich_text"][0]["plain_text"]
+        #title = f"{collab_nom} {collab_prenom}"
+        title = collab["name"]
 
         # Créer l’entrée Athlète
         athlete = notion.pages.create(
@@ -115,7 +118,7 @@ def callback():
                 "Refresh Token": {"rich_text": [{"text": {"content": tokens['refresh_token']}}]},
                 "Expires At": {"number": tokens['expires_at']},
                 "Last Sync": {"date": {"start": datetime.now(timezone.utc).isoformat()}},
-                "Collaborateur": {"relation": [{"id": collab_id}]}
+                "Collaborateur": {"people": [{"id": collab_id}]}
             }
         )
 
@@ -125,24 +128,30 @@ def callback():
 
 def get_collaborateurs_from_club():
     page = notion.pages.retrieve(page_id=config["CLUB_RUNNING_ID"])
-    collaborateurs_rel = page["properties"]["Collaborateurs"]["relation"]
-    collab_ids = [rel["id"] for rel in collaborateurs_rel]
+    #collaborateurs_rel = page["properties"]["Collaborateurs"]["relation"]
+    collaborateurs_rel = page["properties"]["Collaborateurs"]['people']
+    #collab_ids = [rel["id"] for rel in collaborateurs_rel]
 
     collaborateurs = []
 
-    for collab_id in collab_ids:
-        collab_page = notion.pages.retrieve(page_id=collab_id)
-        props = collab_page["properties"]
+    for collab in collaborateurs_rel:
+        #for collab_id in collab_ids:
+        #collab_page = notion.pages.retrieve(page_id=collab_id)
+        #props = collab_page["properties"]
 
-        nom = props["Nom"]["title"][0]["plain_text"] if props["Nom"]["title"] else ""
-        prenom = props["Prénom"]["rich_text"][0]["plain_text"] if props["Prénom"]["rich_text"] else ""
+        #nom = props["Nom"]["title"][0]["plain_text"] if props["Nom"]["title"] else ""
+        #prenom = props["Prénom"]["rich_text"][0]["plain_text"] if props["Prénom"]["rich_text"] else "
+
+        collab_id = collab["id"]
+        name = collab["name"]
 
         collaborateurs.append({
             "id": collab_id,
-            "nom": nom,
-            "prenom": prenom
+            "name": name
+            #"nom": nom,
+            #"prenom": prenom
         })
-
+    print(collaborateurs)
     return collaborateurs
 
 def get_collaborateurs_non_inscrits(challenge_id):
@@ -168,7 +177,8 @@ def get_collaborateurs_non_inscrits(challenge_id):
             continue
         athlete_id = athlete_rel[0]["id"]
         athlete = notion.pages.retrieve(page_id=athlete_id)
-        collab_rel = athlete["properties"].get("Collaborateur", {}).get("relation", [])
+        #collab_rel = athlete["properties"].get("Collaborateur", {}).get("relation", [])
+        collab_rel = athlete["properties"].get("Collaborateur", {}).get("people", [])
         if collab_rel:
             collabs_inscrits.add(collab_rel[0]["id"])
 
@@ -185,7 +195,8 @@ def inscription(challenge_id):
 
     athlete_list = []
     for athlete in athletes_non_inscrits:
-        name = f"{athlete['nom']} {athlete['prenom']}"
+        #name = f"{athlete['nom']} {athlete['prenom']}"
+        name = athlete["name"]
         if name:
             athlete_list.append({"name": name, "id": athlete.get("id")})
 
@@ -206,7 +217,7 @@ def join_challenge():
             database_id=config["ATHLETES_DB_ID"],
             filter={
                 "property": "Collaborateur",  # nom de la propriété de relation
-                "relation": {
+                "people": {
                     "contains": collab_id
                 }
             }
@@ -244,9 +255,6 @@ def join_challenge():
             properties={
                 "Athlete": {"relation": [{"id": athlete_id}]},
                 "Challenge": {"relation": [{"id": challenge_id}]},
-                "Distance totale (km)": {"number": 0},
-                #"Temps total (min)": {"number": 0},
-                #"Nombre d'activités": {"number": 0},
             }
         )
 
@@ -275,4 +283,4 @@ def join_challenge_error():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # fallback à 5000 si PORT non défini
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True, host="0.0.0.0", port=port)
