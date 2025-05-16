@@ -20,7 +20,7 @@ jobs:
         run: pip install -r requirement.txt
 
       - name: Write config.json from secret
-        run: echo '${{ secrets.CONFIG_PROD_JSON }}' > config.json
+        run: echo '${{ secrets.CONFIG_PROD_JSON }}' > config.prod.json
 
       - name: Run script
         run: python recuperation_activites.py
