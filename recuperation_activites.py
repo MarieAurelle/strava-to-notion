@@ -11,41 +11,8 @@ with open("config.json") as f:
 NOTION_SECRET = config["NOTION_TOKEN"]
 DB_ATHLETES = config["ATHLETES_DB_ID"]
 DB_ACTIVITIES = config["ACTIVITES_DB_ID"]
-DB_EXTRACTIONS = config["EXTRACTIONS_DB_ID"]
 
 notion = Client(auth=NOTION_SECRET)
-
-
-def get_last_extraction_date():
-    query = notion.databases.query(
-        **{
-            "database_id": DB_EXTRACTIONS,
-            "sorts": [{"property": "Date", "direction": "descending"}],
-            "page_size": 1
-        }
-    )
-    results = query.get("results", [])
-    if not results:
-        return None
-    return results[0]["properties"]["Date"]["date"]["start"]
-
-
-def create_extraction():
-    now = datetime.now(timezone.utc).isoformat()
-    title = f"Extraction du {now[:10]}"
-    page = notion.pages.create(
-        parent={"database_id": DB_EXTRACTIONS},
-        properties={
-            "Title": {
-                "title": [{"text": {"content": title}}]
-            },
-            "Date": {
-                "date": {"start": now}
-            }
-        }
-    )
-    return page["id"]
-
 
 def get_all_athletes():
     athletes = []
@@ -247,15 +214,6 @@ def get_active_participations(athlete_id):
 
 
 def main():
-    # Récupère la dernière date d'extraction
-    '''last_extract = get_last_extraction_date()
-    after_epoch = int(datetime(2000, 1, 1).timestamp())
-    if last_extract:
-        after_epoch = int(datetime.fromisoformat(last_extract).replace(tzinfo=timezone.utc).timestamp())
-
-    # Crée une nouvelle extraction
-    extraction_id = create_extraction()'''
-
     # Récupère les athlètes
     athletes = get_all_athletes()
     
