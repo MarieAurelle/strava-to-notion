@@ -194,7 +194,14 @@ def main():
         # Convertir les dates en objets datetime
         start_dates = [datetime.fromisoformat(p["start"]) for p in participations]
         end_dates = [datetime.fromisoformat(p["end"]) for p in participations]
-        
+
+        print(athlete["id"])
+        print(start_dates)
+
+        if not start_dates or not end_dates:
+            print(f"⛔ Aucune participation valide pour l'athlète {athlete['id']}.")
+            continue
+
         # Récupérer les dates min et max
         min_start = min(start_dates)
         max_end = max(end_dates)
