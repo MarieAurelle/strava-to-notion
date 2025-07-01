@@ -195,9 +195,6 @@ def main():
         start_dates = [datetime.fromisoformat(p["start"]) for p in participations]
         end_dates = [datetime.fromisoformat(p["end"]) for p in participations]
 
-        print(athlete["id"])
-        print(start_dates)
-
         if not start_dates or not end_dates:
             print(f"⛔ Aucune participation valide pour l'athlète {athlete['id']}.")
             continue
