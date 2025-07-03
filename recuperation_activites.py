@@ -65,6 +65,9 @@ if __name__ == "__main__":
                 # Récupérer les activités déjà enregistrées pour les participations de l'athlete
                 athlete_activities = getAvailableActivitiesForAthleteForChallenges(athlete["id"], min_start, max_end)
                 athlete_activities_ids = []
+
+                print(athlete_activities)
+
                 for activity in athlete_activities:
                     props = activity.get("properties", {})
                     identifiant = props.get("Identifiant", {})
@@ -75,6 +78,9 @@ if __name__ == "__main__":
 
                 # Récupérer les activités dans les participations
                 activities = get_activities(access_token, min_start, max_end)
+
+                print(participations)
+                print(activities)
 
                 for activity in activities:
                     for p in participations:
