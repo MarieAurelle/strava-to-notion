@@ -67,8 +67,12 @@ def get_activities(access_token, start, end):
     params = {"after": int(start.replace(tzinfo=timezone.utc).timestamp()), "before": int(end.replace(tzinfo=timezone.utc).timestamp()), "per_page": 100, "page": 1}
     all_activities = []
 
+    print(params)
+
     while True:
         resp = requests.get(url, headers=headers, params=params)
+
+        print(resp)
 
         if resp.status_code != 200:
             raise Exception(f"❌ Erreur API : {resp.text}")
