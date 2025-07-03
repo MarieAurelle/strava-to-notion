@@ -31,6 +31,9 @@ if __name__ == "__main__":
             athletedb = getAthleteDb(props["ID Flask"]["rich_text"][0]["plain_text"])
             expires_at = datetime.fromtimestamp(int(athletedb.expires_at))
 
+            print(expires_at)
+            print(datetime.utcnow() >= expires_at)
+
             if datetime.utcnow() >= expires_at:
                 client_id = config["STRAVA_CLIENT_ID"]
                 client_secret = config["STRAVA_CLIENT_SECRET"]
@@ -48,14 +51,16 @@ if __name__ == "__main__":
             start_dates = [datetime.fromisoformat(p["start"]) for p in participations]
             end_dates = [datetime.fromisoformat(p["end"]).replace(hour=23, minute=59, second=59) for p in participations]
 
-            if start_dates and end_dates:
-                if not start_dates or not end_dates:
-                    print(f"⛔ Aucune participation valide pour l'athlète {athlete['id']}.")
-                    continue
-
+             if not start_dates or not end_dates:
+                print(f"⛔ Aucune participation valide pour l'athlète {athlete['id']}.")
+                continue
+             else
                 # Récupérer les dates min et max
                 min_start = min(start_dates)
                 max_end = max(end_dates)
+
+                print(min_start)
+                print(max_end)
 
                 # Récupérer les activités déjà enregistrées pour les participations de l'athlete
                 athlete_activities = getAvailableActivitiesForAthleteForChallenges(athlete["id"], min_start, max_end)
