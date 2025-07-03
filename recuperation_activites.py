@@ -49,6 +49,10 @@ if __name__ == "__main__":
             end_dates = [datetime.fromisoformat(p["end"]).replace(hour=23, minute=59, second=59) for p in participations]
 
             if start_dates and end_dates:
+                if not start_dates or not end_dates:
+                    print(f"⛔ Aucune participation valide pour l'athlète {athlete['id']}.")
+                    continue
+
                 # Récupérer les dates min et max
                 min_start = min(start_dates)
                 max_end = max(end_dates)
