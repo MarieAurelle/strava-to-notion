@@ -29,7 +29,7 @@ if __name__ == "__main__":
             props = athlete["properties"]
             # Get athlete dans la bdd flask
             athletedb = getAthleteDb(props["ID Flask"]["rich_text"][0]["plain_text"])
-            expires_at = datetime.fromtimestamp(int(athletedb.expires_at))
+            expires_at = datetime.strptime(athletedb.expires_at, "%Y-%m-%d %H:%M:%S")
 
             print(expires_at)
             print(datetime.utcnow() >= expires_at)
