@@ -54,7 +54,7 @@ if __name__ == "__main__":
              if not start_dates or not end_dates:
                 print(f"⛔ Aucune participation valide pour l'athlète {athlete['id']}.")
                 continue
-             else
+             else:
                 # Récupérer les dates min et max
                 min_start = min(start_dates)
                 max_end = max(end_dates)
