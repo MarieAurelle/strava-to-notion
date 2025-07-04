@@ -163,6 +163,16 @@ def join_challenge_error():
     message = request.args.get("message", "Une erreur est survenue.")
     return render_template("error.html", message=message)
 
+@app.route("/ping")
+def ping():
+    expected_token = config["PING_SECRET"]
+    received_token = request.args.get("token")
+
+    if not expected_token or received_token != expected_token:
+        return jsonify({"status": "unauthorized"}), 401
+
+    return jsonify({"status": "ok", "message": "Warmup successful"}), 200
+
 # Démarrage du serveur
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # fallback à 5000 si PORT non défini

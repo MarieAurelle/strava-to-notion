@@ -1,0 +1,17 @@
+name: Warmup Render App
+
+on:
+  schedule:
+    - cron: '*/12 7-17 * * 1-5'  # Toutes les 12 min, 9h-19h (heure FR), lun à ven
+  workflow_dispatch:  # Pour pouvoir lancer à la main
+
+jobs:
+  warmup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write config.json from secret
+        run: echo '${{ secrets.CONFIG_RECETTE_JSON }}' > config.json
+
+      - name: Ping Render app with timeout and error handling
+        run: |
+          timeout 30 curl -s https://strava-to-notion-recette.onrender.com/ping?token=${{ secrets.PING_SECRET }} || echo "Ping failed or timed out, but continuing workflow."
