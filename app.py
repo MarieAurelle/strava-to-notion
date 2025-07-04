@@ -168,6 +168,9 @@ def ping():
     expected_token = config["PING_SECRET"]
     received_token = request.args.get("token")
 
+    print(expected_token)
+    print(received_token)
+
     if not expected_token or received_token != expected_token:
         return jsonify({"status": "unauthorized"}), 401
 
