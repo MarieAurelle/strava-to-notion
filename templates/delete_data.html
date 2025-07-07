@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Suppression de données</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Suppression de données</h1>
+	{% if athletes|length == 0 %}
+		<p class="info-message">Aucun athlète ne fait partie du club</p>
+	{% else %}
+		<form>
+			<label for="collab_id">Sélectionnez le nom du collaborateur à effacer :</label>
+			<select id="collab_id" name="collab_id" required>
+				{% for athlete in athletes %}
+					<option value="{{ athlete['id'] }}">
+						{{ athlete['name'] }}
+					</option>
+				{% endfor %}
+			</select>
+
+			<button type="button" class="btn" onclick="startRegistration()">Supprimer les données</button>
+		</form>
+	{% endif %}
+  </div>
+</body>
+</html>

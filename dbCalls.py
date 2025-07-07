@@ -41,3 +41,9 @@ def getAthleteDbFromCollab(collab_id):
 
 def saveUser(user):
       db.session.commit()
+
+def delete_collab_from_db(collab_id):
+    athlete = Athlete.query.filter_by(id=collab_id).first()
+    if athlete:
+        db.session.delete(athlete)
+        db.session.commit()

@@ -246,3 +246,32 @@ def getAvailableActivitiesForAthleteForChallenges(athleteId, min_start, max_end)
            ]
         }
     )["results"]
+
+def delete_collab_data_from_notion(collab_id):
+    # Récupération de l'athlète correspondant
+    athlete = getAthleteFromCollab(collab_id)[0]["id"]
+
+    participations = notion.databases.query(
+        database_id=config["PARTICIPATIONS_DB_ID"],
+        filter={
+            "and": [
+                {"property": "Athlete", "relation": {"contains": athlete_id}}
+            ]
+        }
+    )["results"]
+
+    activities = notion.databases.query(
+            database_id=config["ACTIVITES_DB_ID"],
+            filter={
+               "and": [
+                   {"property": "Athlete", "relation": {"contains": athleteId}},
+               ]
+            }
+        )["results"]
+
+    for page in participations:
+        notion.pages.update(page["id"], archived=True)
+    for page in activities:
+        notion.pages.update(page["id"], archived=True)
+    notion.pages.update(athlete, archived=True)
+
