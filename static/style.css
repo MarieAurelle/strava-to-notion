@@ -136,9 +136,29 @@ body.error-page .info-box {
     font-size: 1.1rem;
 }
 
-#spinner p {
-    font-weight: bold;
-    font-size: 1.2em;
-    color: #555;
+.spinner-container {
+    align-items: center;
+    font-family: sans-serif;
+
+    .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid #ccc;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-right: 10px;
+    }
+
+    p {
+        font-weight: bold;
+        font-size: 1.2em;
+        color: #555;
+    }
 }
 
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

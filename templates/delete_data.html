@@ -2,30 +2,31 @@
 <html lang="fr">
 	<head>
 		<meta charset="UTF-8">
-		<title>Inscription au Challenge</title>
+		<title>Suppression de données</title>
 		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
 		<script>
-			window.addEventListener("message", async (event) => {
-				// Sécurité : si possible, filtre ici par event.origin
-				if (event.data && event.data.type === "JOIN_CHALLENGE") {
-					const { collabId, challengeId } = event.data;
+			function startDeletion() {
+				const select = document.getElementById("collab_id");
+				const collabId = select.value;
+				const collabName = select.options[select.selectedIndex].text;
 
+				const reponse = window.confirm("Êtes-vous sûr de vouloir supprimer toutes les données associées à "+collabName+" (Notion + base de données) ? Cette action est irréversible.");
+
+				if(reponse) {
 					const spinner = document.getElementById("spinner");
 					const form = document.getElementsByTagName("form")[0];
 					spinner.style.display = "flex"; // afficher le spinner
 					form.style.display = "none"; // cache le form
 
 					try {
-						fetch("/join-challenge", {
+						fetch("/confirm_delete_collab_data", {
 							method: "POST",
 							headers: {
 								"Content-Type": "application/json"
 							},
-							body: JSON.stringify({ collab_id: collabId, challenge_id: challengeId })
+							body: JSON.stringify({collab_id: collabId})
 						}).then(async (res) => {
 							spinner.style.display = "none"; // cacher spinner quand la requête est terminée
-
 							const result = await res.json();
 							window.location.href = result.redirect_url + "?message=" + encodeURIComponent(result.message);
 						})
@@ -34,34 +35,22 @@
 						console.error("Erreur réseau :", err);
 					}
 				}
-			});
-
-			function startRegistration() {
-				const collabId = document.getElementById("collab_id").value;
-				const challengeId = document.getElementById("challenge_id").value;
-
-				const authUrl = `/start?collab_id=${collabId}&challenge_id=${challengeId}`;
-				const popup = window.open(authUrl, '_blank', 'width=600,height=700');
-
-				if (!popup) {
-					alert("Veuillez autoriser les pop-ups pour vous inscrire.");
-				}
 			}
 		</script>
 	</head>
 	<body>
 		<div class="container">
-		<h1>Inscription au Challenge</h1>
+		<h1>Suppression de données</h1>
 		{% if athletes|length == 0 %}
-			<p class="info-message">🎉 Tous les athlètes sont déjà inscrits à ce challenge !</p>
+			<p class="info-message">Aucun athlète ne fait partie du club</p>
 		{% else %}
 			<div id="spinner" class="spinner-container" style="display:none;">
 				<div class="spinner"></div>
-				<p>Inscription…</p>
+				<p>Suppression en cours…</p>
 			</div>
 
 			<form>
-				<label for="collab_id">Sélectionnez votre nom :</label>
+				<label for="collab_id">Sélectionnez le nom du collaborateur pour lequel les données sont à effacer :</label>
 				<select id="collab_id" name="collab_id" required>
 					{% for athlete in athletes %}
 						<option value="{{ athlete['id'] }}">
@@ -70,10 +59,7 @@
 					{% endfor %}
 				</select>
 
-				<!-- Champ caché pour envoyer l'ID du challenge -->
-				<input type="hidden" id="challenge_id" value="{{ challenge_id }}">
-
-				<button type="button" class="btn" onclick="startRegistration()">S'inscrire au challenge</button>
+				<button type="button" class="btn" onclick="startDeletion()">Supprimer les données</button>
 			</form>
 		{% endif %}
 		</div>
