@@ -1,3 +1,4 @@
 config.json
 config.prod.json
 config.recette.json
+.env
