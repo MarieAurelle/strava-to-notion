@@ -14,4 +14,4 @@ jobs:
 
       - name: Ping Render app with timeout and error handling
         run: |
-          timeout 30 curl -s https://strava-to-notion-recette.onrender.com/ping?token=${{ secrets.PING_SECRET }} || echo "Ping failed or timed out, but continuing workflow."
+          timeout 30 curl -s https://strava-to-notion.onrender.com/ping?token=${{ secrets.PING_SECRET }} || echo "Ping failed or timed out, but continuing workflow."
