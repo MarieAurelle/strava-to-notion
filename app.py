@@ -1,9 +1,9 @@
 from flask import Flask, request, redirect, render_template, url_for, jsonify
 import json, urllib.parse
 import os
-from dbCalls import Athlete, initDb, upsertAthlete, getAthleteDb, getAthleteDbFromCollab, delete_collab_from_db
+from dbCalls import db, Athlete, initDb, upsertAthlete, getAthleteDb, getAthleteDbFromCollab, delete_collab_from_db
 from stravaCalls import askStravaData, getTokens
-from notionCalls import get_collaborateurs_non_inscrits, get_collaborateurs_from_club, updateAthleteFlaskId, createParticipationOfAthleteForChallenge, getAthleteFromCollab, createAthlete, getChallengeParticipations, getChallengeParticipationsForAthlete
+from notionCalls import get_collaborateurs_non_inscrits, get_collaborateurs_from_club, updateAthleteFlaskId, createParticipationOfAthleteForChallenge, getAthleteFromCollab, createAthlete, getChallengeParticipations, getChallengeParticipationsForAthlete, delete_collab_data_from_notion
 from config import getConfig
 
 app = Flask(__name__)
@@ -11,6 +11,9 @@ app = Flask(__name__)
 # Charger la config
 config = getConfig()
 initDb(app, config)
+
+with app.app_context():
+    db.create_all()
 
 # Fonction qui permet d'aller vérifier si la config strava existe
 @app.route("/start")
@@ -173,8 +176,8 @@ def ping():
 
     return jsonify({"status": "ok", "message": "Warmup successful"}), 200
 
-@app.route('/delete_collab', methods=['GET', 'POST'])
-def delete_collab():
+@app.route('/delete_collab_data', methods=['GET'])
+def delete_collab_data():
     athletes_inscrits = get_collaborateurs_from_club()
 
     athlete_list = []
@@ -185,21 +188,35 @@ def delete_collab():
 
     return render_template("delete_data.html", athletes=athlete_list)
 
-@app.route('/confirm_delete_collab', methods=['GET', 'POST'])
-def confirm_delete_collab():
-    collab_id = request.args.get('collab_id')
+@app.route('/confirm_delete_collab_data', methods=['POST'])
+def confirm_delete_collab_data():
+    data = request.get_json()
+    collab_id = data['collab_id']
 
-    if request.method == 'POST':
-        if request.form.get('confirm') == 'yes':
-            try:
-                #delete_collab_data_from_notion(collab_id)
-                #delete_collab_from_db(collab_id)
-                flash("✅ Données supprimées avec succès.", "success")
-            except Exception as e:
-                flash(f"❌ Erreur pendant la suppression : {str(e)}", "danger")
-        return redirect('/confirmation-suppression')
+    try:
+        delete_collab_data_from_notion(collab_id)
+        delete_collab_from_db(collab_id)
+        print("✅ Données supprimées avec succès.")
+        return jsonify({
+            "message": "✅ Données supprimées avec succès.",
+            "redirect_url": url_for('delete_collab_data_success')  # ou une URL vers une page succès dans ton app
+        })
+    except Exception as e:
+        print(f"❌ Erreur pendant la suppression : {str(e)}")
+        return jsonify({
+            "message": f"❌ Erreur pendant la suppression : {str(e)}",
+            "redirect_url": url_for('delete_collab_data_error')  # ou une URL vers une page succès dans ton app
+        })
 
-    return render_template('confirm_delete.html', collab_id=collab_id)
+@app.route("/delete_collab_data/success")
+def delete_collab_data_success():
+    message = request.args.get("message", "Succès !")
+    return render_template("success.html", message=message)
+
+@app.route("/delete_collab_data/error")
+def delete_collab_data_error():
+    message = request.args.get("message", "Succès !")
+    return render_template("error.html", message=message)
 
 # Démarrage du serveur
 if __name__ == "__main__":

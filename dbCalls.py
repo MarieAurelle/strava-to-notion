@@ -12,7 +12,7 @@ class Athlete(db.Model):
     collab_id = db.Column(db.String, unique=True, nullable=False)
     access_token = db.Column(db.String, nullable=False)
     refresh_token = db.Column(db.String, nullable=False)
-    expires_at = db.Column(db.DateTime, nullable=False)
+    expires_at = db.Column(db.String, nullable=False)
     last_sync = db.Column(db.DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
 
 def initDb(app, config):
@@ -43,7 +43,7 @@ def saveUser(user):
       db.session.commit()
 
 def delete_collab_from_db(collab_id):
-    athlete = Athlete.query.filter_by(id=collab_id).first()
+    athlete = getAthleteDbFromCollab(collab_id)
     if athlete:
         db.session.delete(athlete)
         db.session.commit()

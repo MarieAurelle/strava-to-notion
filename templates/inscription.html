@@ -1,79 +1,81 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Inscription au Challenge</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+	<head>
+		<meta charset="UTF-8">
+		<title>Inscription au Challenge</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-	<script>
-		window.addEventListener("message", async (event) => {
-			// Sécurité : si possible, filtre ici par event.origin
-			if (event.data && event.data.type === "JOIN_CHALLENGE") {
-				const { collabId, challengeId } = event.data;
+		<script>
+			window.addEventListener("message", async (event) => {
+				// Sécurité : si possible, filtre ici par event.origin
+				if (event.data && event.data.type === "JOIN_CHALLENGE") {
+					const { collabId, challengeId } = event.data;
 
-				const spinner = document.getElementById("spinner");
-				spinner.style.display = "block"; // afficher le spinner
+					const spinner = document.getElementById("spinner");
+					const form = document.getElementsByTagName("form")[0];
+					spinner.style.display = "flex"; // afficher le spinner
+					form.style.display = "none"; // cache le form
 
-				try {
-					fetch("/join-challenge", {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json"
-						},
-						body: JSON.stringify({ collab_id: collabId, challenge_id: challengeId })
-					}).then(async (res) => {
-						spinner.style.display = "none"; // cacher spinner quand la requête est terminée
+					try {
+						fetch("/join-challenge", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json"
+							},
+							body: JSON.stringify({ collab_id: collabId, challenge_id: challengeId })
+						}).then(async (res) => {
+							spinner.style.display = "none"; // cacher spinner quand la requête est terminée
 
-						const result = await res.json();
-						window.location.href = result.redirect_url + "?message=" + encodeURIComponent(result.message);
-					})
-				} catch (err) {
-					spinner.style.display = "none";
-					console.error("Erreur réseau :", err);
+							const result = await res.json();
+							window.location.href = result.redirect_url + "?message=" + encodeURIComponent(result.message);
+						})
+					} catch (err) {
+						spinner.style.display = "none";
+						console.error("Erreur réseau :", err);
+					}
+				}
+			});
+
+			function startRegistration() {
+				const collabId = document.getElementById("collab_id").value;
+				const challengeId = document.getElementById("challenge_id").value;
+
+				const authUrl = `/start?collab_id=${collabId}&challenge_id=${challengeId}`;
+				const popup = window.open(authUrl, '_blank', 'width=600,height=700');
+
+				if (!popup) {
+					alert("Veuillez autoriser les pop-ups pour vous inscrire.");
 				}
 			}
-		});
+		</script>
+	</head>
+	<body>
+		<div class="container">
+		<h1>Inscription au Challenge</h1>
+		{% if athletes|length == 0 %}
+			<p class="info-message">🎉 Tous les athlètes sont déjà inscrits à ce challenge !</p>
+		{% else %}
+			<div id="spinner" class="spinner-container" style="display:none;">
+				<div class="spinner"></div>
+				<p>Inscription…</p>
+			</div>
 
-		function startRegistration() {
-			const collabId = document.getElementById("collab_id").value;
-			const challengeId = document.getElementById("challenge_id").value;
+			<form>
+				<label for="collab_id">Sélectionnez votre nom :</label>
+				<select id="collab_id" name="collab_id" required>
+					{% for athlete in athletes %}
+						<option value="{{ athlete['id'] }}">
+							{{ athlete['name'] }}
+						</option>
+					{% endfor %}
+				</select>
 
-			const authUrl = `/start?collab_id=${collabId}&challenge_id=${challengeId}`;
-			const popup = window.open(authUrl, '_blank', 'width=600,height=700');
+				<!-- Champ caché pour envoyer l'ID du challenge -->
+				<input type="hidden" id="challenge_id" value="{{ challenge_id }}">
 
-			if (!popup) {
-				alert("Veuillez autoriser les pop-ups pour vous inscrire.");
-			}
-		}
-	</script>
-</head>
-<body>
-  <div class="container">
-    <h1>Inscription au Challenge</h1>
-	{% if athletes|length == 0 %}
-		<p class="info-message">🎉 Tous les athlètes sont déjà inscrits à ce challenge !</p>
-	{% else %}
-		<div id="spinner" style="display:none;">
-		  <p>Chargement…</p>
-		  <!-- Tu peux aussi mettre un spinner CSS ou une animation ici -->
+				<button type="button" class="btn" onclick="startRegistration()">S'inscrire au challenge</button>
+			</form>
+		{% endif %}
 		</div>
-
-		<form>
-			<label for="collab_id">Sélectionnez votre nom :</label>
-			<select id="collab_id" name="collab_id" required>
-				{% for athlete in athletes %}
-					<option value="{{ athlete['id'] }}">
-						{{ athlete['name'] }}
-					</option>
-				{% endfor %}
-			</select>
-
-			<!-- Champ caché pour envoyer l'ID du challenge -->
-			<input type="hidden" id="challenge_id" value="{{ challenge_id }}">
-
-			<button type="button" class="btn" onclick="startRegistration()">S'inscrire au challenge</button>
-		</form>
-	{% endif %}
-  </div>
-</body>
+	</body>
 </html>

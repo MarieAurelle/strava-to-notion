@@ -5,7 +5,7 @@
     <title>Connexion réussie</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    {% if auto_close_popup == "True" %}
+    {% if auto_close_popup and auto_close_popup == "True" %}
     <script>
         window.onload = function () {
             window.opener.postMessage({
