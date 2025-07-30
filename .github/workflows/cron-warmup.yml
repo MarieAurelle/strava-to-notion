@@ -1,4 +1,4 @@
-name: Warmup Render App - Recette
+name: Warmup Render App - Production
 
 on:
   schedule:
