@@ -42,9 +42,14 @@ def start():
         else:
             athlete = athlete[0]
             # Si l'athlète existe, on vérifie que son ID flask existe bien en bdd
-            athleteFlask = getAthleteDb(int(athlete["properties"]["ID Flask"]["rich_text"][0]["plain_text"]))
 
-            if not athleteFlask:
+            if athlete["properties"]["ID Flask"]["rich_text"]:
+                athleteFlask = getAthleteDb(int(athlete["properties"]["ID Flask"]["rich_text"][0]["plain_text"]))
+
+                if not athleteFlask:
+                    # Si la config Flask n'existe pas alors on demande l'authentification Strava
+                    return askStravaData(collab_id, challenge_id)
+            else:
                 # Si la config Flask n'existe pas alors on demande l'authentification Strava
                 return askStravaData(collab_id, challenge_id)
 
