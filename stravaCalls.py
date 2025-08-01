@@ -49,12 +49,12 @@ def refresh_token(refresh_token, client_id, client_secret, athlete_page_id, user
 
     access_token = token_data["access_token"]
     new_refresh_token = token_data["refresh_token"]
-    expires_at = datetime.fromtimestamp(token_data["expires_at"]).isoformat()
+    expires_at = token_data["expires_at"]
 
     #Mise à jour dans la bdd
     user.access_token = access_token
     user.refresh_token = new_refresh_token
-    user.expires_at = datetime.utcfromtimestamp(token_data["expires_at"])
+    user.expires_at = expires_at
     user.last_sync = datetime.now(timezone.utc).isoformat()
 
     saveUser(user)
